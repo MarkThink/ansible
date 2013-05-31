@@ -108,6 +108,7 @@ DEFAULT_LOG_PATH               = shell_expand_path(get_config(p, DEFAULTS, 'log_
 
 ANSIBLE_NOCOWS                 = get_config(p, DEFAULTS, 'nocows', 'ANSIBLE_NOCOWS', None)
 ANSIBLE_SSH_ARGS               = get_config(p, 'ssh_connection', 'ssh_args', 'ANSIBLE_SSH_ARGS', None)
+ANSIBLE_ALLOW_AGENT_FORWARDING_WITH_SUDO = get_config(p, 'ssh_connection', 'allow_agent_forwarding_with_sudo', 'ANSIBLE_AGENT_FORWARD_SUDO', False)
 ZEROMQ_PORT                    = int(get_config(p, 'fireball', 'zeromq_port', 'ANSIBLE_ZEROMQ_PORT', 5099))
 
 # non-configurable things

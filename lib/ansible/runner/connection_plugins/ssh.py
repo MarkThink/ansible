@@ -93,6 +93,8 @@ class Connection(object):
     def exec_command(self, cmd, tmp_path, sudo_user,sudoable=False, executable='/bin/sh'):
         ''' run a command on the remote host '''
 
+        agent_forward_with_sudo = C.ANSIBLE_ALLOW_AGENT_FORWARDING_WITH_SUDO
+
         ssh_cmd = self._password_cmd()
         ssh_cmd += ["ssh", "-tt", "-q"] + self.common_args + [self.host]
 
@@ -102,7 +104,16 @@ class Connection(object):
             else:
                 ssh_cmd.append(cmd)
         else:
-            sudocmd, prompt = utils.make_sudo_cmd(sudo_user, executable, cmd)
+            export_env_vars = []
+            if agent_forward_with_sudo:
+                export_env_vars = ['SSH_AUTH_SOCK']
+                sudocmd, prompt = utils.make_sudo_cmd(sudo_user, executable, cmd, export_env_vars)
+                if sudo_user != 'root':
+                    grant_sock_access = "/usr/bin/setfacl -m u:%s:rw $SSH_AUTH_SOCK;/usr/bin/setfacl -m u:%s:x $(dirname $SSH_AUTH_SOCK); " % (sudo_user, sudo_user)
+                    sudocmd = grant_sock_access + sudocmd
+            else:
+                sudocmd, prompt = utils.make_sudo_cmd(sudo_user, executable, cmd)
+
             ssh_cmd.append(sudocmd)
 
         vvv("EXEC %s" % ssh_cmd, host=self.host)

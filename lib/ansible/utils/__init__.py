@@ -672,7 +672,7 @@ def compile_when_to_only_if(expression):
     else:
         raise errors.AnsibleError("invalid usage of when_ operator: %s" % expression)
 
-def make_sudo_cmd(sudo_user, executable, cmd):
+def make_sudo_cmd(sudo_user, executable, cmd, export_env_vars=[]):
     """
     helper function for connection plugins to create sudo commands
     """
@@ -685,9 +685,18 @@ def make_sudo_cmd(sudo_user, executable, cmd):
     # the -p option.
     randbits = ''.join(chr(random.randint(ord('a'), ord('z'))) for x in xrange(32))
     prompt = '[sudo via ansible, key=%s] password: ' % randbits
-    sudocmd = '%s -k && %s %s -S -p "%s" -u %s %s -c %s' % (
+    extra_env = ''
+
+    # export_env_vars is a list of environment variables that need to be
+    # exported from the user to the sudo_user
+    if export_env_vars:
+        extra_env = '/usr/bin/env '
+        for var in export_env_vars:
+            extra_env += '%s=$%s ' % (var, var)
+
+    sudocmd = '%s -k && %s %s -S -p "%s" -u %s %s %s -c %s' % (
         C.DEFAULT_SUDO_EXE, C.DEFAULT_SUDO_EXE, C.DEFAULT_SUDO_FLAGS,
-        prompt, sudo_user, executable or '$SHELL', pipes.quote(cmd))
+        prompt, sudo_user, extra_env, executable or '$SHELL', pipes.quote(cmd))
     return ('/bin/sh -c ' + pipes.quote(sudocmd), prompt)
 
 def get_diff(diff):
