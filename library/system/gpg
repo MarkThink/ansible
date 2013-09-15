@@ -1,0 +1,117 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# (c) 2013, Nimbis Services, Inc.
+# Author: Lorin Hochstein <lorin@nimbisservices.com>
+#
+# This file is part of Ansible
+#
+# Ansible is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Ansible is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
+
+
+DOCUMENTATION = """
+---
+module: gpg
+short_description: manage gpg keys
+desciption:
+  - Add public and private gpg keys
+options:
+  public_key:
+    description:
+      - "A GPG public key, as a string"
+    required: false
+    default: null
+  private_key:
+    description:
+      - "A GPG private key, as a string"
+    requred: false
+    default: null
+requirements: ["gnupg", "python-gnupg"]
+author: Lorin Hochstein
+"""
+
+EXAMPLES = """
+gpg: public_key="{{ lookup('file', '/home/charlie/keys/mykey.gpg') }}"
+gpg: private_key="{{ lookup('file', '/home/charlie/keys/mykey.key') }}"
+"""
+
+try:
+    import gnupg
+except ImportError:
+    pythongnupg_found = False
+else:
+    pythongnupg_found = True
+
+
+def add_public_key(gpg, public_key):
+    import_result = gpg.import_keys(public_key)
+    changed = False
+    for result in import_result.results:
+        if 'problem' in result:
+            raise ValueError(result['text'])
+        else:
+            text = result['text']
+            if 'Not actually changed' not in text:
+                changed = True
+    return (changed, text)
+
+
+def add_private_key(gpg, public_key):
+    import_result = gpg.import_keys(public_key)
+    changed = False
+    for result in import_result.results:
+        if 'problem' in result:
+            raise ValueError(result['text'])
+        else:
+            text = result['text']
+            if 'Not actually changed' not in text:
+                changed = True
+    return (changed, text)
+
+
+def main():
+
+    arg_spec = dict(
+        public_key=dict(required=False, default=None),
+        private_key=dict(required=False, default=None)
+    )
+
+    module = AnsibleModule(argument_spec=arg_spec,
+                           supports_check_mode=False)
+
+    if not pythongnupg_found:
+        module.fail_json(msg="python-gnupg is required")
+
+    public_key = module.params['public_key']
+    private_key = module.params['private_key']
+
+    gpg = gnupg.GPG()
+
+    changed = False
+    if public_key:
+        (changed, text) = add_public_key(gpg, public_key)
+    elif private_key:
+        (changed, text) = add_private_key(gpg, private_key)
+    else:
+        module.fail_json(
+                msg="either public_key or private_key must be specified")
+
+    module.exit_json(changed=changed, msg=text)
+
+
+# this is magic, see lib/ansible/module_common.py
+#<<INCLUDE_ANSIBLE_MODULE_COMMON>>
+
+if __name__ == '__main__':
+    main()
